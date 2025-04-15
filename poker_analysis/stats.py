@@ -19,12 +19,13 @@ def get_action_counts(df, action, player_dict, min_words=5, amount_index=None):
                     result[player_id] += 1
     return result
 
-def calc_aggression_factor(bets, raises, calls):
+def calc_aggression_factor(bets, raises, calls, player_dict):
     factor = {}
     for player_id in bets:
-        agg = bets[player_id] + raises[player_id]
-        calls_ = calls[player_id]
-        factor[player_id] = round(agg / calls_, 2) if calls_ else float('inf')
+        agg = bets.get(player_id, 0) + raises.get(player_id, 0)
+        calls_ = calls.get(player_id, 0)
+        player_name = player_dict.get(player_id, player_id)  # fallback to ID if name missing
+        factor[player_name] = round(agg / calls_, 2) if calls_ else float('inf')
     return factor
 
 def track_player_presence(df, player_dict):
@@ -135,8 +136,23 @@ def calc_VPIP(df, player_dict):
         elif calls > 30: vpip_count -= 1
         
 
-        vpip[player] = math.floor((vpip_count / total_hands) * 100) if total_hands > 0 else 0.0
+        vpip[player] = math.floor((vpip_count / total_hands) * 100) if total_hands > 0 else 0
 
         
 
     return vpip
+
+
+def calc_PFR(df, player_dict):
+    """Calculates preflop raise percentage for each player.
+    A function of number of raises preflop divided by total number of hands played"""
+    hands_played = track_player_presence(df, player_dict)
+    preflop_raises = track_all_preflop_actions(df, player_dict, 'raises')
+
+    pfr = {}
+    for player in hands_played:
+        total_hands = hands_played[player]
+        raises = preflop_raises.get(player, 0)
+        pfr[player] = math.floor(raises / total_hands*100) if total_hands > 0 else 0
+
+    return pfr

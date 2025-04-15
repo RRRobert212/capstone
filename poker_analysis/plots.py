@@ -1,17 +1,100 @@
+
 import matplotlib.pyplot as plt
-import mpld3
+import io
+import base64
 
 def plot_bar_chart(players, data, title, xlabel, ylabel):
     player_names = list(players.values())
     values = list(data.values())
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.bar(player_names, values, color='g')
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_title(title)
-    ax.set_xticklabels(player_names, rotation=45, ha='right')
+    fig, ax = plt.subplots(figsize=(12, 6))
+    bars = ax.bar(player_names, values, color='green')
+
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(ylabel, fontsize=14)
+    ax.set_title(title, fontsize=16)
+    ax.set_xticks(range(len(player_names)))
+    ax.set_xticklabels(player_names, rotation=45, ha='right', fontsize=12, fontweight='bold')
     ax.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Convert the plot to an interactive HTML string using mpld3
-    return mpld3.fig_to_html(fig)
+    # Save plot to a BytesIO buffer
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+
+    # Convert buffer to base64 and embed as HTML
+    encoded = base64.b64encode(buf.read()).decode('utf-8')
+    buf.close()
+    plt.close(fig)
+
+    return f'<img src="data:image/png;base64,{encoded}" />'
+
+
+def plot_vpip_vs_pfr(vpip, pfr, players):
+    fig, ax = plt.subplots(figsize=(12, 8)) 
+
+
+    ax.scatter(vpip.values(), pfr.values(), color='green')
+
+    # Add player name labels
+    for player in players:
+        ax.text(vpip[player] + 1.5, pfr[player]+0.5, player,
+                fontsize=14, fontweight='bold', ha='right')
+
+    ax.set_xlabel("VPIP (%)", fontsize=16)
+    ax.set_ylabel("PFR (%)", fontsize=16)
+    ax.set_title("VPIP vs PFR", fontsize=18)
+    ax.grid(True)
+
+    # Save plot to a BytesIO buffer
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+
+    # Convert buffer to base64 and embed as HTML
+    encoded = base64.b64encode(buf.read()).decode('utf-8')
+    buf.close()
+    plt.close(fig)  # Close the plot to free memory
+
+    return f'<img src="data:image/png;base64,{encoded}" />'
+
+
+#yes this is like copy pasted, but it ends up being simpler
+def plot_vpip_vs_af(vpip, af, players):
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Create x and y arrays with consistent ordering
+    x_vals = []
+    y_vals = []
+    for player in vpip:
+        if player in af:
+            x_vals.append(vpip[player])
+            y_vals.append(af[player])
+
+    ax.scatter(x_vals, y_vals, color='green')
+
+    # Add player name labels
+    for player in vpip:
+        if player in af:
+            ax.text(vpip[player]+2, af[player]+0.05, player,
+                    fontsize=14, fontweight='bold', ha='right')
+
+    ax.set_xlabel("VPIP (%)", fontsize=16)
+    ax.set_ylabel("Aggression Factor", fontsize=16)
+    ax.set_title("VPIP vs Aggression Factor", fontsize=18)
+    ax.grid(True)
+
+    # Save plot to a BytesIO buffer
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+
+    # Convert buffer to base64 and embed as HTML
+    encoded = base64.b64encode(buf.read()).decode('utf-8')
+    buf.close()
+    plt.close(fig)
+
+    return f'<img src="data:image/png;base64,{encoded}" />'
