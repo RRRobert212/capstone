@@ -2,6 +2,9 @@
 import matplotlib.pyplot as plt
 import io
 import base64
+import datetime
+import matplotlib.dates as mdates
+from datetime import datetime
 
 def plot_bar_chart(players, data, title, xlabel, ylabel):
     player_names = list(players.values())
@@ -98,3 +101,49 @@ def plot_vpip_vs_af(vpip, af, players):
     plt.close(fig)
 
     return f'<img src="data:image/png;base64,{encoded}" />'
+
+
+
+
+def plot_player_stacks(player_stacks):
+    """
+    Plots the stack amounts of players over hands.
+    """
+    fig, ax = plt.subplots(figsize=(16, 9))
+
+    for player, stack_data in player_stacks.items():
+
+        times = []
+        for entry in stack_data:
+            timestamp = entry[0]
+            if isinstance(timestamp, str):
+
+                timestamp = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+            times.append(timestamp)
+
+        stacks = [entry[1] for entry in stack_data]
+        
+        ax.plot(times, stacks, label=player)
+
+    # Format the x-axis to display time in HH:MM format
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+    ax.set_xlabel("Time", fontsize=16)
+    ax.set_ylabel("Stack Size", fontsize=16)
+    ax.set_title("Player Stacks Over Time", fontsize=18)
+    ax.legend(loc='upper left')
+    ax.grid(True)
+
+    # Save plot to a BytesIO buffer
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+
+    # Convert buffer to base64 and embed as HTML
+    encoded = base64.b64encode(buf.read()).decode('utf-8')
+    buf.close()
+    plt.close(fig)
+
+    return f'<img src="data:image/png;base64,{encoded}" />'
+

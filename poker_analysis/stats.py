@@ -156,3 +156,47 @@ def calc_PFR(df, player_dict):
         pfr[player] = math.floor(raises / total_hands*100) if total_hands > 0 else 0
 
     return pfr
+
+
+
+import re
+from collections import defaultdict
+from datetime import datetime
+
+import re
+from collections import defaultdict
+from datetime import datetime
+
+import re
+from collections import defaultdict
+from datetime import datetime
+
+def track_player_stacks(df, player_dict):
+    """
+    Tracks each player's stack amount over time from the log and returns a dictionary
+    mapping player names to a list of (timestamp, stack) tuples.
+    """
+    player_stacks = defaultdict(list)
+    for entry in df.itertuples(index=False):
+        timestamp_str = entry.at.strip()  # Timestamp column
+        entry_str = entry.entry.strip()  # Entry column
+        
+        # Parse player stacks if present
+        if "Player stacks:" in entry_str:
+            matches = re.findall(r'"([^"]+ @ [^"]+)" \((\d+\.\d+)\)', entry_str)
+            for match in matches:
+                name, stack = match
+                player_name = player_dict.get(name.split(" @ ")[1], name.split(" @ ")[0])  # Map player ID to name
+                player_stacks[player_name].append((timestamp_str, float(stack)))
+
+        # Handle player quitting
+        elif "quits the game with a stack of 0.00" in entry_str:
+            # Parse the player quitting event
+            match = re.search(r'"([^"]+ @ [^"]+)" quits the game with a stack of 0.00', entry_str)
+            if match:
+                player_name = player_dict.get(match.group(1).split(" @ ")[1], match.group(1).split(" @ ")[0])
+                # Set the player's stack to 0 at this point in time
+                player_stacks[player_name].append((timestamp_str, 0.00))
+    
+    return player_stacks
+
