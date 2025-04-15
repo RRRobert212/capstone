@@ -23,14 +23,12 @@ def index():
             #player presence, number of hands
             hands = stats.track_player_presence(df, player_dict)
             print("Hands: ", hands)
-            callcount = stats.track_preflop_calls(df, player_dict)
+            callcount = stats.track_all_preflop_actions(df, player_dict, 'calls')
+            raisecount = stats.track_all_preflop_actions(df, player_dict, 'raises')
+            vpip = stats.calc_VPIP(df, player_dict)
             print("CALL COUNTS: ", callcount)
-            pfr = stats.track_preflop_raises(df, player_dict)
-            print("PFR: ", pfr)
-            noflopraise = stats.track_pfr_noflop(df, player_dict)
-            print('PFRNOFLOP: ', noflopraise)
-            noflopcalls = stats.track_calls_noflop(df, player_dict)
-            print('CALLNOFLOP: ', noflopcalls)
+            print("RAISECOUNT: ",raisecount)
+            print("VPIP: ", vpip)
 
             # Collect stats for calls, raises, bets, and aggression factor
             calls = stats.get_action_counts(df, 'calls', player_dict)

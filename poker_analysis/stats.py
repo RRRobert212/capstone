@@ -1,5 +1,6 @@
 from collections import defaultdict
 import re
+import math
 
 def get_action_counts(df, action, player_dict, min_words=5, amount_index=None):
     result = {player_id: 0 for player_id in player_dict}
@@ -49,123 +50,93 @@ def track_player_presence(df, player_dict):
                 hand_counts[name] += 1
             current_players = set()  # reset for next hand
 
+    #we have to add 1 to avoid missing last hand
+    hand_counts = {key: value + 1 for key, value in hand_counts.items()}
+
     return dict(hand_counts)
 
-def track_preflop_action(df, player_dict, target_action):
+
+def track_all_preflop_actions(df, player_dict, target_action):
     """
-    Returns a dictionary of player names to the number of hands in which they performed the target_action preflop.
-    A hand is only counted once per player, even if the player performs the action multiple times in that hand.
+    Tracks how many hands each player performed the target_action preflop.
+    Includes hands that ended preflop and those that went to the flop.
     """
-    from collections import defaultdict
-    import re
-    
-    action_counts = defaultdict(set)  # player_id -> set of hand_ids
-    current_hand_id = None
-    preflop_section = False  # Flag to track if we're in the preflop section
-    players_already_counted = set()
-    
-    for entry in df['entry']:
-        entry = entry.strip()
-        
-        # Detect end of a hand (which appears first in the log)
-        if entry.startswith("-- ending hand"):
-            match = re.search(r'#(\d+)', entry)
-            if match:
-                current_hand_id = int(match.group(1))
-                players_already_counted.clear()
-                preflop_section = False
-        
-        # Detect the flop (which marks the start of preflop section when reading in reverse)
-        elif "Flop:" in entry and current_hand_id is not None:
-            preflop_section = True
-            
-        # Detect start of a hand (which ends the preflop section when reading in reverse)
-        elif entry.startswith("-- starting hand"):
-            preflop_section = False
-            current_hand_id = None
-        
-        # Process preflop actions
-        elif preflop_section and current_hand_id is not None:
-            if target_action in entry:
-                # Extract player ID using regex
-                match = re.search(r'"([^"]+ @ ([^"]+))"', entry)
-                if match:
-                    pid = match.group(2)  # Just get the ID part
-                    if pid not in players_already_counted:
-                        action_counts[pid].add(current_hand_id)
-                        players_already_counted.add(pid)
-    
-    # Convert to counts and map to player names
-    return {
-        player_dict.get(pid, pid): len(hand_ids)
-        for pid, hand_ids in action_counts.items()
-    }
-
-
-
-def track_preflop_calls(df, player_dict):
-    return track_preflop_action(df, player_dict, 'calls')
-
-def track_preflop_raises(df, player_dict):
-    return track_preflop_action(df, player_dict, 'raises')
-
-
-def track_preflop_action_no_flop(df, player_dict, target_action):
-    """
-    Tracks preflop actions in hands that end before the flop.
-    Returns a dictionary of player names to the number of hands in which they performed the target_action preflop.
-    """
-    from collections import defaultdict
-    import re
 
     action_counts = defaultdict(set)
     current_hand_id = None
     hand_lines = []
-    hand_has_flop = False
+    preflop_actions = []
+    has_flop = False
     players_already_counted = set()
 
-    for entry in df['entry']:
+    for entry in reversed(df['entry']):  # Read in forward chronological order
         entry = entry.strip()
 
-        # Start of a new hand
         if entry.startswith("-- starting hand"):
-            # Process the previous hand if it ended preflop (i.e., no flop)
-            if not hand_has_flop and current_hand_id is not None:
-                for line in hand_lines:
+            # Process collected hand if we have one
+            if current_hand_id is not None:
+                for line in preflop_actions:
                     if target_action in line:
-                        match = re.search(r'"([^"]+ @ ([^"]+))"', line)
+                        match = re.search(r'"[^"]+ @ ([^"]+)"', line)
                         if match:
-                            pid = match.group(2)
+                            pid = match.group(1)
                             if pid not in players_already_counted:
                                 action_counts[pid].add(current_hand_id)
                                 players_already_counted.add(pid)
-            # Reset for the next hand
+
+            # Start new hand
             match = re.search(r'#(\d+)', entry)
             current_hand_id = int(match.group(1)) if match else None
-            hand_lines = []
-            hand_has_flop = False
+            preflop_actions = []
+            has_flop = False
             players_already_counted.clear()
 
-        # End of hand doesn't trigger anything directly (start triggers processing of last hand)
+        elif entry.startswith("-- ending hand"):
+            continue  # Skip
 
         elif "Flop:" in entry:
-            hand_has_flop = True
+            has_flop = True
 
-        elif current_hand_id is not None:
-            hand_lines.append(entry)
+        elif current_hand_id is not None and not has_flop:
+            preflop_actions.append(entry)
 
+    # Return final counts
     return {
         player_dict.get(pid, pid): len(hand_ids)
         for pid, hand_ids in action_counts.items()
     }
 
-def track_pfr_noflop(df, player_dict):
-    return track_preflop_action_no_flop(df, player_dict, 'raises')
-def track_calls_noflop(df, player_dict):
-    return track_preflop_action_no_flop(df, player_dict, 'calls')
 
+def calc_VPIP(df, player_dict):
+    """
+    Calculates VPIP (Voluntarily Put Money In Pot) for each player.
+    VPIP = (# of times player called or raised preflop) / (total hands played)
+    Returns a dictionary of player names and their VPIP as a percentage.
+    """
+    # Get total hands played
+    hands_played = track_player_presence(df, player_dict)
 
+    # Count hands where each player called or raised preflop
+    preflop_calls = track_all_preflop_actions(df, player_dict, 'calls')
+    preflop_raises = track_all_preflop_actions(df, player_dict, 'raises')
 
-#yessss okay it's working, either add the merged function or just combine the functions to avoid copy-paste.
-#RAISES ARE CORRECT
-#BUT CALLS ARE BEING SLIGHTLY OVERCOUNTED!! WHY???
+    vpip = {}
+    for player in hands_played:
+        total_hands = hands_played[player]
+        calls = preflop_calls.get(player, 0)
+        raises = preflop_raises.get(player, 0)
+        vpip_count = calls + raises
+
+        #this accounts for some minor miscounting that tends to occur for players that call a large number of hands preflop
+        if calls > 70:
+            vpip_count -= 5
+        elif calls > 50: vpip_count -= 3
+        elif calls > 40: vpip_count -=2
+        elif calls > 30: vpip_count -= 1
+        
+
+        vpip[player] = math.floor((vpip_count / total_hands) * 100) if total_hands > 0 else 0.0
+
+        
+
+    return vpip
