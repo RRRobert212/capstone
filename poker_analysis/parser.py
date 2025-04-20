@@ -15,6 +15,3 @@ def create_player_dict(df):
             player_dict[id] = name
     return player_dict
 
-import re
-
-

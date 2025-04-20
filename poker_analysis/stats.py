@@ -159,18 +159,6 @@ def calc_PFR(df, player_dict):
 
 
 
-import re
-from collections import defaultdict
-from datetime import datetime
-
-import re
-from collections import defaultdict
-from datetime import datetime
-
-import re
-from collections import defaultdict
-from datetime import datetime
-
 def track_player_stacks(df, player_dict):
     """
     Tracks each player's stack amount over time from the log and returns a dictionary
