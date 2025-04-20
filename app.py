@@ -34,6 +34,7 @@ def index():
 
             # Collect stats for calls, raises, bets, and aggression factor
             calls = stats.get_action_counts(df, 'calls', player_dict)
+            print('CALLSSSSS: ', calls)
             raises = stats.get_action_counts(df, 'raises', player_dict)
             bets = stats.get_action_counts(df, 'bets', player_dict)
             folds = stats.get_action_counts(df, 'folds', player_dict, 3)
