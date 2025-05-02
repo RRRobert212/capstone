@@ -37,7 +37,7 @@
         }
     
         input[type="submit"] {
-            background-color: #4CAF50;
+            background-color: #409c43;
             border: none;
             color: white;
             padding: 10px 20px;
@@ -80,7 +80,20 @@
             max-width: 100%;
             height: auto;
         }
+        .corner-image {
+            position: absolute;
+            width: 120px;
+            top: 10px;
+            z-index: 10;
+        }
 
+        .corner-image.left {
+            left: 10px;
+        }
+
+        .corner-image.right {
+            right: 10px;
+        }
     </style>
     
 </head>
@@ -91,6 +104,18 @@
         <input type="submit" value="Analyze">
     </form>
 
+    <img src="{{ url_for('static', filename='pokerchip.png') }}" class="corner-image left">
+    <img src="{{ url_for('static', filename='pokerchip.png') }}" class="corner-image right">
+    
+
+    {% if matrix_file %}
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{{ url_for('download_matrix', filename=matrix_file) }}"
+           style="font-size: 20px; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+            Download Analysis Matrix
+        </a>
+    </div>
+    {% endif %}
     {% if charts %}
         <div class="results">
             <h2>Analysis Results:</h2>
@@ -103,5 +128,6 @@
             </div>
         </div>
     {% endif %}
+
 </body>
 </html>

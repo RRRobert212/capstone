@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Log</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fafafa;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Uploaded CSV Log</h1>
+    <table>
+        <tr>
+            <th>Filename</th>
+            <th>Timestamp</th>
+        </tr>
+        {% for entry in uploads %}
+        <tr>
+            <td>{{ entry.filename }}</td>
+            <td>{{ entry.timestamp }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
